@@ -191,9 +191,8 @@ geoserver.adminPanel.prototype.extendMarker_ = function(gs, marker, html, result
 
 geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
   var me = this;
-  if (me.highlightPoly_) { console.log('removing'); me.map_.removeOverlay(me.highlightPoly_); }
-  if (!me.selected_geometry_) { console.log('returning'); return; }
-  console.log('updating hp');
+  if (me.highlightPoly_) { me.map_.removeOverlay(me.highlightPoly_); }
+  if (!me.selected_geometry_) { return; }
   var mapNormalProj = G_NORMAL_MAP.getProjection();
   var mapZoom = me.map_.getZoom();
   if (me.selected_geometry_.data.type == 'point') {
@@ -206,7 +205,6 @@ geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
     var southwest_pixel = mapNormalProj.fromLatLngToPixel(bounds.getSouthWest(), mapZoom);
     var northeast_pixel = mapNormalProj.fromLatLngToPixel(bounds.getNorthEast(), mapZoom);
     var circle_radius = Math.floor(Math.abs(southwest_pixel.x - northeast_pixel.x)*.7);
-    console.log(circle_radius);
   }
   var latlngs = [];
   var center_pixel = mapNormalProj.fromLatLngToPixel(latlng, mapZoom);
