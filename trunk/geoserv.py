@@ -3,10 +3,18 @@ import xml.dom.minidom
 from urllib import urlencode
 import traceback
 import sys
+import exceptions
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.api import users
+
+class IncorrectUserException(exceptions.Exception):
+	def __init__(self):
+		return
+		
+	def __str__(self):
+		print "","IncorrectUserException"
 
 class Geometry(db.Model):
   name = db.StringProperty()
@@ -247,6 +255,10 @@ class Request(webapp.RequestHandler):
 
   def editGeometries(self):
     try:
+      user = users.GetCurrentUser()
+      userid=None
+      if user:
+        userid=user.email()
       lat = self.request.get('lat',allow_multiple=True,default_value=0.0)
       lng = self.request.get('lng',allow_multiple=True,default_value=0.0)
       name = self.request.get('name',default_value = '')
@@ -263,35 +275,46 @@ class Request(webapp.RequestHandler):
       type = self.request.get('type',default_value='point')
 
       gp = Geometry.get(key)
-      gp.name = name
-      gp.description=description
-      gp.type=type
-      gp.coordinates=coords
-      gp.altitudes=alts
-      gp.tags=tags
-      gp.bboxEast=east
-      gp.bboxWest=west
-      gp.bboxSouth=south
-      gp.bboxNorth=north
-      gp.put()
-      gps = [gp]
-      gps.append(gp)
-      jsonResponse,contentType = jsonOutput(gps, 'edit')
+      if gp.userid == userid | user.is_current_user_admin():
+        gp.name = name
+        gp.description=description
+        gp.type=type
+        gp.coordinates=coords
+        gp.altitudes=alts
+        gp.tags=tags
+        gp.bboxEast=east
+        gp.bboxWest=west
+        gp.bboxSouth=south
+        gp.bboxNorth=north
+        gp.put()
+        gps = [gp]
+        gps.append(gp) 
+      else:
+        raise IncorrectUserException
 
-    except TypeError, ValueError:
+      jsonResponse,contentType = jsonOutput(gps, 'edit')
+      
+    except TypeError, ValueError, IncorrectUserException:
       jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
       contentType = 'text/javascript'
     return jsonResponse,contentType
 
 
   def deleteGeometries(self):
+    user = users.GetCurrentUser()
+    userid=None
+    if user:
+      userid=user.email()
     success = "success"
 
     try:
-      key = str(self.request.get('key'))
-      gp = Geometry.get(key)
-      gp.delete()
-      jsonResponse = "{operation:'delete',status:'success',key:'%s'}" % key
+      if gp.userid == userid | user.is_current_user_admin():
+        key = str(self.request.get('key'))
+        gp = Geometry.get(key)
+        gp.delete()
+        jsonResponse = "{operation:'delete',status:'success',key:'%s'}" % key
+      else:
+        raise IncorrectUserException
     except:
       jsonResponse = "{error:{type:'delete',records:{key:'%s'}}}" % self.request.get('key')
     contentType = 'text/javascript'
