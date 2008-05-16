@@ -12,31 +12,52 @@ geoserver.adminPanel = function(id) {
   this.selected_geometry_ = null;
   this.geometries_ = [];
   this.mode_ = 'view';
-  this.creation_state_ = 'notstarted';
   this.createMap_();
 };
+
+geoserver.adminPanel.prototype.canUserEdit_ = function(userId) {
+  return (userId == current_user || is_admin == 'True'); 
+}
+
+geoserver.adminPanel.prototype.isUserLoggedIn_ = function() {
+  return current_user != 'Not logged in';
+}
 
 geoserver.adminPanel.prototype.createMap_ = function() {
   var me = this;
   var table = document.createElement('table');
   table.style.width = '100%';
+  if (window.innerHeight) {
+    var height = window.innerHeight - 40; 
+  } else {
+    var height = document.documentElement.offsetHeight - 40; 
+  }
+  height = height + "px";
+
   var tr = document.createElement('tr');
+
   var map_td = document.createElement('td');
-  map_td.width = '70%';
+  map_td.height = height;
   var map_div = document.createElement('div');
-  map_div.style.height = '700px';
+  map_div.style.width = '100%';
+  map_div.style.height = '100%';
   map_div.style.border = '1px solid grey';
   map_td.appendChild(map_div);
+
   var sidebar_td = document.createElement('td');
   sidebar_td.width = '29%';
+  sidebar_td.height = height;
   var sidebar_div = document.createElement('div');
-  sidebar_div.style.height = '700px';
-  sidebar_div.style.overflow = 'auto';
+  sidebar_div.id = 'sidebar';
+  sidebar_div.style.overflow = 'scroll';
   sidebar_div.style.border = '1px solid grey';
+  sidebar_div.style.height = height;
   sidebar_td.appendChild(sidebar_div);
+
   tr.appendChild(map_td);
   tr.appendChild(sidebar_td);
   table.appendChild(tr);
+
   this.dom_.wrapper_div.appendChild(table);
   this.dom_.sidebar_div = sidebar_div;
  
@@ -47,27 +68,30 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   this.map_.addControl(new GLargeMapControl());
   this.map_.addControl(new GMapTypeControl());
   this.map_.enableGoogleBar();
-  var edit_control = new EditControl();
-  this.map_.addControl(edit_control);
-  var status_control = new StatusControl();
-  this.map_.addControl(status_control);
-  GEvent.addListener(edit_control, 'view', function() { 
-    me.mode_ = 'view'; 
+
+  if (this.isUserLoggedIn_()) {
+    var edit_control = new EditControl();
+    this.map_.addControl(edit_control);
+    var status_control = new StatusControl();
+    this.map_.addControl(status_control);
+  
+  GEvent.addListener(edit_control, 'view', function() {
+    me.mode_ = 'view';
     status_control.setText('Select geometries by clicking on them.');
   });
-  GEvent.addListener(edit_control, 'point', function() { 
-    me.mode_ = 'point'; 
+  GEvent.addListener(edit_control, 'point', function() {
+    me.mode_ = 'point';
     status_control.setText('Click on the map to create a new marker.');
   });
-  GEvent.addListener(edit_control, 'line', function() { 
-    me.mode_ = 'line'; 
+  GEvent.addListener(edit_control, 'line', function() {
+    me.mode_ = 'line';
     status_control.setText('Click on the map to start creating a new line.');
   });
-  GEvent.addListener(edit_control, 'poly', function() { 
-    me.mode_ = 'poly'; 
+  GEvent.addListener(edit_control, 'poly', function() {
+    me.mode_ = 'poly';
     status_control.setText('Click on the map to start creating a new filled poly.');
   });
-
+  }
   // Create a base icon for all of our markers that specifies the
   // shadow, icon dimensions, etc.
   var icon = new GIcon(G_DEFAULT_ICON);
@@ -85,41 +109,13 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   this.icons_.newlysaved.image = 'http://gmaps-samples.googlecode.com/svn/trunk/markers/orange/blank.png';
   this.icons_.notsaved = new GIcon(icon);
   this.icons_.notsaved.image = 'http://gmaps-samples.googlecode.com/svn/trunk/markers/red/blank.png';
-  var icon = new GIcon(G_DEFAULT_ICON);
-  icon.image = 'http://maps.google.com/intl/en_us/mapfiles/iw_plus.gif';
-  icon.shadow = null;
-  icon.iconSize = new GSize(12, 12);
-  icon.shadowSize = new GSize(0, 0);
-  icon.iconAnchor = new GPoint(6, 6);
-  this.icons_.vertex = icon;
 
   GEvent.addListener(this.map_, 'click', function(overlay, latlng) {
     // todo check if we're already editing something
-    if (me.mode_ == 'view') {
+    if (me.mode_ == 'view' || (me.selected_geometry_ && !me.selected_geometry_.hasEnded)) {
       return;
     }
     if (overlay) return; 
-    if (me.mode_ != 'point') {
-      if (me.creation_state_ == 'notstarted') {
-        me.creation_state_ = 'started';
-        me.temp_vertices_ = [];
-        me.temp_geometry_ = null;
-        me.temp_endmarker_ = null;
-        me.temp_startmarker_ = me.createVertexMarker_(latlng);
-        me.map_.addOverlay(me.temp_startmarker_);
-      }
-      me.temp_vertices_.push(latlng);
-      if (me.temp_geometry_) me.map_.removeOverlay(me.temp_geometry_);
-      var opts = {color: "#ff0000", strokeWeight: 2, strokeOpacity: 1, fillOpacity: 0.01};
-      me.temp_geometry_ = (me.mode_ == 'line') ? new GPolyline(me.temp_vertices_, opts.color, opts.strokeWeight, opts.strokeOpacity) : new GPolygon(me.temp_vertices_, opts.color, opts.strokeWeight, opts.strokeOpacity, opts.color, opts.fillOpacity);
-      me.map_.addOverlay(me.temp_geometry_);
-      if (me.temp_vertices_.length > 1) {
-        if (me.temp_endmarker_) me.map_.removeOverlay(me.temp_endmarker_);
-        me.temp_endmarker_ = me.createVertexMarker_(latlng);
-        me.map_.addOverlay(me.temp_endmarker_);
-      }
-      return;
-    }
     new_geometry_data = {};
     new_geometry_data.name = '';
     new_geometry_data.description = '';
@@ -133,39 +129,14 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   GEvent.addListener(this.map_, 'zoomend', function() {
     me.updateHighlightPoly_();
   });
-  this.loadData_();
+  this.loadKmlData_();
 };
-
-geoserver.adminPanel.prototype.createVertexMarker_ = function(latlng) {
-  var me = this;
-
-  var marker = new GMarker(latlng, {icon: me.icons_.vertex});
-  GEvent.addListener(marker, 'click', function() {
-    new_geometry_data = {};
-    new_geometry_data.name = '';
-    new_geometry_data.description = '';
-    new_geometry_data.userId = current_user;
-    new_geometry_data.coordinates = [];
-    me.temp_vertices_.push(latlng);
-    for (var i = 0; i < me.temp_vertices_.length; i++) {
-      new_geometry_data.coordinates.push({lat: me.temp_vertices_[i].lat(), lng: me.temp_vertices_[i].lng()});
-    }
-    new_geometry_data.type = me.mode_;
-    var new_geometry = me.createGeometry_(new_geometry_data, true); 
-    me.map_.removeOverlay(me.temp_geometry_);
-    me.map_.removeOverlay(me.temp_startmarker_);
-    me.map_.removeOverlay(me.temp_endmarker_);
-    me.creation_state_ = 'notstarted';
-  });
- 
-  return marker;
-}
 
 geoserver.adminPanel.prototype.extendMarker_ = function(gs, marker, html, result) {
   var me = this;
   // extend the passed in html for this result
   // http://code.google.com/apis/ajaxsearch/documentation/reference.html#_class_GlocalResult
-
+  if (!me.isUserLoggedIn_()) return; 
   var div = document.createElement('div');
   var button = document.createElement('input');
   button.type = 'button';
@@ -189,11 +160,11 @@ geoserver.adminPanel.prototype.extendMarker_ = function(gs, marker, html, result
   return div;
 };
 
+
 geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
   var me = this;
-  if (me.highlightPoly_) { console.log('removing'); me.map_.removeOverlay(me.highlightPoly_); }
-  if (!me.selected_geometry_) { console.log('returning'); return; }
-  console.log('updating hp');
+  if (me.highlightPoly_) { me.map_.removeOverlay(me.highlightPoly_); }
+  if (!me.selected_geometry_) { return; }
   var mapNormalProj = G_NORMAL_MAP.getProjection();
   var mapZoom = me.map_.getZoom();
   if (me.selected_geometry_.data.type == 'point') {
@@ -206,7 +177,6 @@ geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
     var southwest_pixel = mapNormalProj.fromLatLngToPixel(bounds.getSouthWest(), mapZoom);
     var northeast_pixel = mapNormalProj.fromLatLngToPixel(bounds.getNorthEast(), mapZoom);
     var circle_radius = Math.floor(Math.abs(southwest_pixel.x - northeast_pixel.x)*.7);
-    console.log(circle_radius);
   }
   var latlngs = [];
   var center_pixel = mapNormalProj.fromLatLngToPixel(latlng, mapZoom);
@@ -221,7 +191,7 @@ geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
   var color = me.selected_geometry_.isEdited ? '#FF0000' : '#FF8921';
   me.highlightPoly_ = new GPolygon(latlngs, '#ff0000', 0, 0.0, color, 0.2, {clickable: false});
   me.map_.addOverlay(me.highlightPoly_);
-  
+
 }
     
 geoserver.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
@@ -241,12 +211,16 @@ geoserver.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
     } 
     me.selected_geometry_ = geometry;
     div.style.backgroundColor = '#FFD7AE';
-    me.dom_.sidebar_div.scrollTop = div.offsetTop;
+    console.log(div.offsetTop);
+    console.log(div.scrollTop);
+    console.log(div.style.height);
+    console.log(me.dom_.sidebar_div.offsetHeight);
+    me.dom_.sidebar_div.scrollTop = div.offsetTop - me.dom_.sidebar_div.offsetHeight/2;
     me.updateHighlightPoly_();
   });
 
   GEvent.addDomListener(div, 'click', function() {
-    if (geometry.data.userId == current_user) {
+    if (me.canUserEdit_(geometry.data.userId)) {
       if (div.className != 'editable_div') {
         GEvent.trigger(div, 'enableedit');
       }
@@ -302,10 +276,10 @@ geoserver.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
     }
     else if (me.selected_geometry_.data.type == 'line' || me.selected_geometry_.data.type == 'poly') {
       GEvent.addListener(geometry, 'mouseover', function() {
-        //geometry.enableEditing();
+        geometry.enableEditing();
       });
       GEvent.addListener(geometry, 'mouseout', function() {
-        //geometry.disableEditing();
+        geometry.disableEditing();
       });
     }
   });
@@ -351,7 +325,7 @@ geoserver.adminPanel.prototype.createView_ = function(geometry, parent_div) {
   tbody.appendChild(me.createTableRow_('Created', geometry.data.userId + ',' + geometry.data.timeStamp, false, geometry));
   table.appendChild(tbody);
   div.appendChild(table);
-  if (geometry.data.userId == current_user) {
+  if (me.canUserEdit_(geometry.data.userId)) {
     var edit_div = document.createElement('div');
     edit_div.style.textAlign = 'center';
     var edit_button = document.createElement('input');
@@ -390,7 +364,7 @@ geoserver.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
       me.selected_geometry_.disableDragging();
       me.selected_geometry_.data.coordinates = [{lat: me.selected_geometry_.getLatLng().lat(), lng:  me.selected_geometry_.getLatLng().lng()}];
     } else if (me.selected_geometry_.data.type == 'line' || me.selected_geometry_.data.type == 'poly') {
-      //me.selected_geometry_.disableEditing();
+      me.selected_geometry_.disableEditing();
       GEvent.clearListeners(me.selected_geometry_,  'mouseover');
       GEvent.clearListeners(me.selected_geometry_,  'mouseout');
       me.selected_geometry_.data.coordinates = [];
@@ -414,7 +388,6 @@ geoserver.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
     // should do this after delete confirmed
     if (me.selected_geometry_.data.type != 'point'){
       me.selected_geometry_.disableEditing;
-      map.removeOverlay(me.selected_geometry_.editable_poly);
     }
     me.map_.removeOverlay(me.selected_geometry_);
     me.selected_geometry_ = null;
@@ -435,10 +408,11 @@ geoserver.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
   return div;
 };
 
-geoserver.adminPanel.prototype.loadData_ = function() {
+geoserver.adminPanel.prototype.loadKmlData_ = function() {
   var me = this;
   var url_base = 'gen/';
   var url = url_base + 'request?operation=get&output=json'
+  //&userid=' + current_user;
   GDownloadUrl(url, function(data, responseCode) { me.handleDataResponse_(me, data, responseCode); });
 };
 
@@ -488,36 +462,6 @@ geoserver.adminPanel.prototype.handleDataResponse_ = function(me, data, response
   }
 };
 
-geoserver.adminPanel.prototype.createPoly_ = function(type, latlngs, is_editable) {
-  var me = this;
-  var poly = (type == 'line') ? new GPolyline(latlngs, '#ff0000', 2, 0.7, {clickable: false}) : new GPolygon(latlngs, '#ff0000', 2, 0.7, '#ff0000', 0.2, {clickable: false});
-  poly.vertex_markers = [];
-  for (var i = 0; i < latlngs.length; i++) {
-    var marker = new GMarker(latlngs[i], {icon: me.icons_.vertex, draggable: true});
-    GEvent.addListener(marker, 'dragend', function() {
-      me.map_.removeOverlay(me.selected_geometry_.editable_poly);
-      var latlngs = [];
-      var vertex_markers = me.selected_geometry_.editable_poly.vertex_markers;
-      for (var i = 0; i < vertex_markers.length; i++) {
-        var latlng = vertex_markers[i].getLatLng();
-        latlngs.push(latlng);
-      }
-      var poly = (type == 'line') ? new GPolyline(latlngs, '#ff0000', 2, 0.7, {clickable: false}) : new GPolygon(latlngs, '#ff0000', 2, 0.7, '#ff0000', 0.2, {clickable: false});
-      poly.vertex_markers = vertex_markers;
-      me.map_.addOverlay(poly);
-      me.selected_geometry_.editable_poly = poly;
-    });
-    this.map_.addOverlay(marker);
-    poly.vertex_markers.push(marker);
-    if(!is_editable) { marker.disableDragging(); }
-  }
-  me.map_.addOverlay(poly);
-  return poly;
-}
-
-geoserver.adminPanel.prototype.canUserEdit_ = function(data) {
-  return (data.userId == current_user);
-}
 
 geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
   var me = this;
@@ -528,20 +472,13 @@ geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
     for (var i = 0; i < data.coordinates.length; i++) {
       latlngs.push(new GLatLng(data.coordinates[i].lat, data.coordinates[i].lng));
     }
-    var opts = {color: "#0000ff", strokeWeight: 6, strokeOpacity: 0.7, fillOpacity: 0.5};
-    if (me.canUserEdit_(data)) {
-      opts = {color: "#ff0000", strokeWeight: 0, strokeOpacity: 0.1, fillOpacity: 0.01};
-    }
-    var geometry = (data.type == 'line') ? new GPolyline(latlngs, opts.color, opts.strokeWeight, opts.strokeOpacity) : new GPolygon(latlngs, opts.color, opts.strokeWeight, opts.strokeOpacity, opts.color, opts.fillOpacity);
-    if (me.canUserEdit_(data)) {
-      geometry.editable_poly = me.createPoly_(data.type, latlngs, is_editable);
-    }
+    var geometry = (data.type == 'line') ? new GPolyline(latlngs) : new GPolygon(latlngs, '#0000ff', 2, 0.7, '#0000ff', 0.2);
   }
   geometry.data = data;
-
-  if (me.canUserEdit_(geometry.data)) {
+  if (me.canUserEdit_(geometry.data.userId)) {
     geometry.isEdited = is_editable;
     geometry.isEditable = is_editable;
+    geometry.hasEnded = !is_editable;
   }
 
   var sidebar_entry = me.createSidebarEntry_(geometry);
@@ -557,25 +494,21 @@ geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
     GEvent.trigger(geometry.sidebar_entry, 'highlight');
   });
 
-  if (geometry.data.userId == current_user) { 
+  if (me.canUserEdit_(geometry.data.userId)) { 
+    GEvent.addListener(geometry, 'click', function() {
+      GEvent.trigger(geometry.sidebar_entry, 'enableedit');
+    });
+
     if (geometry.data.type == 'point') {
-      GEvent.addListener(geometry, 'click', function() {
-        GEvent.trigger(geometry.sidebar_entry, 'enableedit');
-      });
       GEvent.addListener(geometry, 'dragend', function() {
         geometry.isEdited = true;
         me.updateHighlightPoly_();
         GEvent.trigger(geometry.sidebar_entry, 'dataedit');
       });
     } else if (geometry.data.type == 'line' || geometry.data.type == 'poly') {
-      GEvent.addListener(geometry, 'click', function() {
-        for (var i = 0; i < geometry.editable_poly.vertex_markers.length; i++) {
-          geometry.editable_poly.vertex_markers[i].enableDragging();
-        }
-        GEvent.trigger(geometry.sidebar_entry, 'enableedit');
-      });
       GEvent.addListener(geometry, 'endline', function() {
         geometry.isEdited = true;
+        geometry.hasEnded = true;
         GEvent.trigger(geometry.sidebar_entry, 'dataedit');
       });
       GEvent.addListener(geometry, 'lineupdated', function() {
@@ -585,39 +518,13 @@ geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
       });
       if (is_editable) {
         me.selected_geometry_ = geometry;
-        //geometry.addVerticesInteractively(); 
+        geometry.addVerticesInteractively(); 
       }
     }
   }
   return geometry;
 }
  
-function StatusControl() {
-}
-
-StatusControl.prototype = new GControl();
-
-StatusControl.prototype.initialize = function(map) {
-  var me = this;
-  var status_div = document.createElement('span');
-  status_div.style.color = 'grey';
-  status_div.style.backgroundColor = 'white';
-  status_div.style.border = '1px solid grey';
-  status_div.style.padding = '5px';
-  status_div.innerHTML = 'Select geometries by clicking on them.';
-  this.status_div = status_div;
-  map.getContainer().appendChild(status_div);
-  return this.status_div;
-}
-
-StatusControl.prototype.setText = function(text) {
-  this.status_div.innerHTML = text;
-}
-
-StatusControl.prototype.getDefaultPosition = function() {
-  return new GControlPosition(G_ANCHOR_BOTTOM_LEFT, new GSize(420, 5));
-}
-
 function EditControl() {
 }
 
@@ -628,9 +535,7 @@ EditControl.prototype.initialize = function(map) {
   me.buttons_ = [];
  
   var control_div = document.createElement('div'); 
-  //control_div.style.width = '100%';
   var control_table = document.createElement('table');
-  //control_table.style.width = "300px";
   var control_tr = document.createElement('tr');
   
   var vc_opts = {img_url: 'http://www.google.com/intl/en_us/mapfiles/ms/t/Bsu.png',
@@ -698,5 +603,31 @@ EditControl.prototype.createButton_ = function(button_opts) {
 
 EditControl.prototype.getDefaultPosition = function() {
   return new GControlPosition(G_ANCHOR_BOTTOM_LEFT, new GSize(260, 0));
+}
+
+function StatusControl() {
+}
+
+StatusControl.prototype = new GControl();
+
+StatusControl.prototype.initialize = function(map) {
+  var me = this;
+  var status_div = document.createElement('span');
+  status_div.style.color = 'grey';
+  status_div.style.backgroundColor = 'white';
+  status_div.style.border = '1px solid grey';
+  status_div.style.padding = '5px';
+  status_div.innerHTML = 'Select geometries by clicking on them.';
+  this.status_div = status_div;
+  map.getContainer().appendChild(status_div);
+  return this.status_div;
+}
+
+StatusControl.prototype.setText = function(text) {
+  this.status_div.innerHTML = text;
+}
+
+StatusControl.prototype.getDefaultPosition = function() {
+  return new GControlPosition(G_ANCHOR_BOTTOM_LEFT, new GSize(420, 5));
 }
  

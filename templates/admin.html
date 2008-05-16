@@ -10,50 +10,15 @@
   <script type="text/javascript">
   {% if login %}
   var current_user = '{{ login.name }}';
+  var is_admin = '{{ login.admin }}';
   {% endif %}
   </script>
 </head>
  <body onload="new geoserver.adminPanel('adminPanel')">
-   <div id="controls-top">
-    <table style="width:100%" cellpadding="0" cellspacing="0">
-<tr>
-<td class="header" style="width:60%">
-<span style="font-size: 36px">geo data store</span>
-</td>
-<td class="header" style="text-align:right">
     {% if login %}
     {{ login.name }} | <a href="{{ login.url }}">{{login.linktext }}</a>
     {% endif %}
-</td>
-</tr>
-<tr>
-<tr>
-<td class="divider" colspan="2">
-<!-- nothing here! -->
-</td>
-</tr>
-<td class="subheader" colspan="2">
-<table>
-  <tr>
-   <td class="sublink" id="sublink0">
-     <a href="admin" id="sublink0a">Map Admin Panel</a></td>
-   <td> | </td>
-   <td class="sublink" id="sublink1">
-     <a href="query" id="sublink1a">KML Output</a></td>
-  </tr>
-
-</table>
-</td>
-</tr>
-</table>
-   </div>
    <div id="adminPanel"></div>
-<table style="width:100%" cellpadding="0" cellspacing="0">
-<tr>
-<td class="divider" colspan="2">
-<!-- nothing here! -->
-</td>
-</table>
  </body>
 </html>
 

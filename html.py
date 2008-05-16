@@ -34,7 +34,8 @@ class BasePage(webapp.RequestHandler):
       'login': {
         'url': login_url,
         'linktext': login_linktext,
-        'name': login_name
+        'name': login_name,
+        'admin': users.is_current_user_admin()
       }
     }
     return template_values
