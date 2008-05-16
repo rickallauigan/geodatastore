@@ -60,7 +60,37 @@ def jsonOutput(geometries, operation):
   geoJsonOutput = ''.join(geoJson)
   contentType = 'text/javascript'
   return geoJsonOutput, contentType
+def createPlacemark(place,geometry,kmlDoc):
+  name = kmlDoc.createElement('name')
+  textNode = kmlDoc.createTextNode(geometry.name)
+  name.appendChild(textNode)
+  place.appendChild(name)
+  description = kmlDoc.createElement('description')
+  textNode = kmlDoc.createTextNode(geometry.description)
+  description.appendChild(textNode)
+  place.appendChild(description)
+  coordString = createCoordinateString(geometry.coordinates,geometry.altitudes)
+  coords = kmlDoc.createElement('coordinates')
+  coordsText = kmlDoc.createTextNode(coordString)
+  coords.appendChild(coordsText)
+  if geometry.type == 'point':
+    point = kmlDoc.createElement('Point')
+    point.appendChild(coords)
+    place.appendChild(point)
 
+  elif geometry.type == 'poly':
+    polygon = kmlDoc.createElement('Polygon')
+    outerBounds = kmlDoc.createElement('outerBoundaryIs')
+    polygon.appendChild(outerBounds)
+    outerBounds.appendChild(coords)
+    place.appendChild(polygon)
+
+  elif geometry.type == 'line':
+    line = kmlDoc.createElement('LineString')
+    line.appendChild(coords)
+    place.appendChild(line)
+  return place
+  
 def kmlOutput(geometries,bboxWest=None,bboxSouth=None,bboxEast=None,bboxNorth=None):
   # This creates the core document.
   kmlDoc = xml.dom.minidom.Document()
@@ -82,38 +112,15 @@ def kmlOutput(geometries,bboxWest=None,bboxSouth=None,bboxEast=None,bboxNorth=No
         createPlace = True
       else:
         createPlace = False
-    if createPlace == True:
-      place = kmlDoc.createElement('Placemark')
-      name = kmlDoc.createElement('name')
-      textNode = kmlDoc.createTextNode(geometry.name)
-      name.appendChild(textNode)
-      place.appendChild(name)
-      description = kmlDoc.createElement('description')
-      textNode = kmlDoc.createTextNode(geometry.description)
-      description.appendChild(textNode)
-      place.appendChild(description)
-      coordString = createCoordinateString(geometry.coordinates,geometry.altitudes)
-      coords = kmlDoc.createElement('coordinates')
-      coordsText = kmlDoc.createTextNode(coordString)
-      coords.appendChild(coordsText)
-    
-      if geometry.type == 'point':
-        point = kmlDoc.createElement('Point')
-        point.appendChild(coords)
-        place.appendChild(point)
-
-      elif geometry.type == 'poly':
-        polygon = kmlDoc.createElement('Polygon')
-        outerBounds = kmlDoc.createElement('outerBoundaryIs')
-        polygon.appendChild(outerBounds)
-        outerBounds.appendChild(coords)
-        place.appendChild(polygon)
-
-      elif geometry.type == 'line':
-        line = kmlDoc.createElement('LineString')
-        line.appendChild(coords)
-        place.appendChild(line)
-     
+      if createPlace == True:
+        p = kmlDoc.createElement('Placemark')
+        place = createPlacemark(p,geometry,kmlDoc)
+        p = None
+        document.appendChild(place)
+    else:
+      p = kmlDoc.createElement('Placemark')
+      place = createPlacemark(p,geometry,kmlDoc)
+      p = None
       document.appendChild(place)
   kml.appendChild(document)
   contentType = 'application/vnd.google-earth.kml+xml' 
