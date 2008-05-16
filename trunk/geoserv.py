@@ -228,25 +228,27 @@ class Request(webapp.RequestHandler):
       userid=None
       if user:
         userid=user.email()
-      west, south, east, north = computeBBox(lat,lng)
-      coords = []
-      for i in range(0, len(lat)):
-        gp = db.GeoPt(lat[i], lng[i])
-        coords.append(gp)
-      altitudes = []
-      for alt in alts:
-        altitudes.append(float(alt))
-      description = self.request.get('description')
-      type = self.request.get('type',default_value='point')
-      gp = Geometry(name=name,description=description,type=type,
-                     coordinates=coords,altitudes=altitudes,
-                     tags=tags, bboxEast=east, bboxWest=west,
-                     bboxSouth=south, bboxNorth=north,userId=userid)
+        west, south, east, north = computeBBox(lat,lng)
+        coords = []
+        for i in range(0, len(lat)):
+          gp = db.GeoPt(lat[i], lng[i])
+          coords.append(gp)
+        altitudes = []
+        for alt in alts:
+          altitudes.append(float(alt))
+        description = self.request.get('description')
+        type = self.request.get('type',default_value='point')
+        gp = Geometry(name=name,description=description,type=type,
+                       coordinates=coords,altitudes=altitudes,
+                       tags=tags, bboxEast=east, bboxWest=west,
+                       bboxSouth=south, bboxNorth=north,userId=userid)
 
-      gp.put()
-      gps = []
-      gps.append(gp)
-      jsonResponse,contentType = jsonOutput(gps,'add')
+        gp.put()
+        gps = []
+        gps.append(gp)
+        jsonResponse,contentType = jsonOutput(gps,'add')
+    else:
+      raise InvalidUserException
 
     except TypeError, ValueError:
       jsonResponse="{error:{type:'add',lat:'%s',lng:'%s'}}" % (lat[0], lng[0])
