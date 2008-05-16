@@ -247,8 +247,8 @@ class Request(webapp.RequestHandler):
         gps = []
         gps.append(gp)
         jsonResponse,contentType = jsonOutput(gps,'add')
-    else:
-      raise InvalidUserException
+      else:
+        raise InvalidUserException
 
     except TypeError, ValueError:
       jsonResponse="{error:{type:'add',lat:'%s',lng:'%s'}}" % (lat[0], lng[0])
@@ -296,7 +296,13 @@ class Request(webapp.RequestHandler):
 
       jsonResponse,contentType = jsonOutput(gps, 'edit')
       
-    except TypeError, ValueError, IncorrectUserException:
+    except TypeError:
+      jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
+      contentType = 'text/javascript'
+    except ValueError:
+      jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
+      contentType = 'text/javascript'
+    except IncorrectUserException:
       jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
       contentType = 'text/javascript'
     return jsonResponse,contentType
