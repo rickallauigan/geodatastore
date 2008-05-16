@@ -162,7 +162,7 @@ class Request(webapp.RequestHandler):
         out,contentType = self.deleteGeometries()
       else:
         out,contentType = self.getGeometries()
-      self.response.headers.add_header('Content-Type', contentType)
+      self.response.headers['content-type']= contentType
       self.response.out.write(out)
 
   def getGeometries(self):
@@ -197,7 +197,9 @@ class Request(webapp.RequestHandler):
       qryString = 'WHERE %s LIMIT %s' % (' and '.join(query), limit)
     geometries = Geometry.gql(qryString)
     outputAction = {'json': jsonOutput(geometries,'get'),'kml': kmlOutput(geometries,bboxWest,bboxSouth,bboxEast,bboxNorth)}
+    outputType = {'json': 'text/json','kml': 'application/vnd.google-earth.kml+xml'}
     out,contentType = outputAction.get(output)
+    contentType = outputType.get(output)
     return out,contentType
 
   def addGeometries(self):
