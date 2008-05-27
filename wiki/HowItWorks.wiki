@@ -56,7 +56,7 @@ To query the datastore, we only have to call the gql method of Geometry: geometr
     outputAction = {'json': jsonOutput(geometries,'get'),'kml': kmlOutput(geometries)}
 }}}
 
-===WebApp RequestHandler===
+===!WebApp !RequestHandler===
 !GeoDataStore accepts both Get and Post requests, and essentially treats them the same. Post, of course, allows sending larger amounts of data and for shorter URLs, and is more secure. We decided to treat them the same, that is to allow adding data using Get, to allow for easy user testing of the datastore without using the Maps interface. These are the steps involved:
 
 All operations go through the same RequestHandler: Request.
@@ -135,7 +135,7 @@ kmlOutput() iterates through the Geometry entites creating <Placemark> elements.
 
 If it does, then the entity is used to create a <Placemark>, otherwise it skips on to the next entity.
 
-===GeoPts and altitude===
+===!GeoPts and altitude===
 Latitude and Longitude values are stored separately as GeoPts for each geometry. This was done to demonstrate usage of GeoPt, which is a native App Engine type for coordinate data. However, GeoPt does not store altitude. This isn't a problem for 2D data, such as is used in the Maps API, but it is a problem for 3D data, such as data represented by KML. So, GeoStore stores the list of altitudes separately.
 
 Output
