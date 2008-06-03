@@ -66,7 +66,7 @@ def jsonOutput(geometries, operation):
   geoJson.append(','.join(points))
   geoJson.append(']}}}')
   geoJsonOutput = ''.join(geoJson)
-  contentType = 'text/javascript'
+  contentType = 'application/javascript'
   return geoJsonOutput, contentType
 def createPlacemark(place,geometry,kmlDoc):
   name = kmlDoc.createElement('name')
@@ -212,7 +212,7 @@ class Request(webapp.RequestHandler):
       qryString = 'WHERE %s LIMIT %s' % (' and '.join(query), limit)
     geometries = Geometry.gql(qryString)
     outputAction = {'json': jsonOutput(geometries,'get'),'kml': kmlOutput(geometries,bboxWest,bboxSouth,bboxEast,bboxNorth)}
-    outputType = {'json': 'text/json','kml': 'application/vnd.google-earth.kml+xml'}
+    outputType = {'json': 'application/json','kml': 'application/vnd.google-earth.kml+xml'}
     out,contentType = outputAction.get(output)
     contentType = outputType.get(output)
     return out,contentType
@@ -252,7 +252,7 @@ class Request(webapp.RequestHandler):
 
     except TypeError, ValueError:
       jsonResponse="{error:{type:'add',lat:'%s',lng:'%s'}}" % (lat[0], lng[0])
-      contentType = 'text/javascript'
+      contentType = 'application/javascript'
     return jsonResponse,contentType
 
   def editGeometries(self):
@@ -298,13 +298,13 @@ class Request(webapp.RequestHandler):
       
     except TypeError:
       jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
-      contentType = 'text/javascript'
+      contentType = 'application/javascript'
     except ValueError:
       jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
-      contentType = 'text/javascript'
+      contentType = 'application/javascript'
     except IncorrectUserException:
       jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
-      contentType = 'text/javascript'
+      contentType = 'application/javascript'
     return jsonResponse,contentType
 
 
@@ -325,7 +325,7 @@ class Request(webapp.RequestHandler):
         raise IncorrectUserException
     except:
       jsonResponse = "{error:{type:'delete',records:{key:'%s'}}}" % self.request.get('key')
-    contentType = 'text/javascript'
+    contentType = 'application/javascript'
     return jsonResponse,contentType
 
 application = webapp.WSGIApplication(

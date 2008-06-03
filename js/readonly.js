@@ -90,7 +90,7 @@ geoserver.mapDisplay.prototype.updateHighlightPoly_ = function() {
   var color = me.selected_geometry_.isEdited ? '#FF0000' : '#FF8921';
   me.highlightPoly_ = new GPolygon(latlngs, '#ff0000', 0, 0.0, color, 0.2, {clickable: false});
   me.map_.addOverlay(me.highlightPoly_);
-}
+};
     
 geoserver.mapDisplay.prototype.createSidebarEntry_ = function(geometry) {
   var me = this;
@@ -103,7 +103,7 @@ geoserver.mapDisplay.prototype.createSidebarEntry_ = function(geometry) {
   var view_div = me.createView_(geometry, div);
   div.appendChild(view_div);
   return div;
-}
+};
 
 geoserver.mapDisplay.prototype.createTableRow_ = function(label, value, is_input, geometry) {
   var tr = document.createElement('tr');
@@ -123,7 +123,7 @@ geoserver.mapDisplay.prototype.createTableRow_ = function(label, value, is_input
   tr.appendChild(label_td);
   tr.appendChild(value_td);
   return tr;
-}
+};
 
 geoserver.mapDisplay.prototype.createView_ = function(geometry, parent_div) {
   var me = this;
@@ -136,7 +136,7 @@ geoserver.mapDisplay.prototype.createView_ = function(geometry, parent_div) {
   table.appendChild(tbody);
   div.appendChild(table);
   return div;
-}
+};
 
 geoserver.mapDisplay.prototype.loadKmlData_ = function() {
   var me = this;
@@ -199,5 +199,5 @@ geoserver.mapDisplay.prototype.createGeometry_ = function(data, is_editable) {
   });
 
   return geometry;
-}
+};
  
