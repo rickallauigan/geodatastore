@@ -8,6 +8,8 @@ handlers:
   script: geoserv.py
 - url: /gen/.*
   script: geoserv.py
+- url: /locate
+  script: locator.py
 - url: /js
   static_dir: js
 - url: /css

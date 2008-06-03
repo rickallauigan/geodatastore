@@ -91,10 +91,26 @@ class MapDisplayPage(BasePage):
   # rendering
   def getTemplateFilename(self): 
     return "mapdisplay.html"
+  
+##
+# Page class for the locator view
+class LocatorPage(BasePage):
+  ##
+  # Returns a dictionary with values for the template
+  def getTemplateValues(self):
+    template_values = BasePage.getTemplateValues(self)
+    return template_values
+
+  ##
+  # Returns the filename of the template to use when
+  # rendering
+  def getTemplateFilename(self): 
+    return "locator.html"
 
 application = webapp.WSGIApplication(
     [('/', AdminPage),
      ('/admin', AdminPage),
      ('/mapdisplay', MapDisplayPage),
+     ('/locator', LocatorPage),
      ('/query', QueryPage)],debug=True)
 wsgiref.handlers.CGIHandler().run(application)
