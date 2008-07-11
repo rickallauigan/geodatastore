@@ -1,20 +1,12 @@
 import wsgiref.handlers
 import xml.dom.minidom
-from urllib import urlencode
+from urllib import quote
 import traceback
 import sys
-import exceptions
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.api import users
-
-class IncorrectUserException(exceptions.Exception):
-	def __init__(self):
-		return
-		
-	def __str__(self):
-		print "","IncorrectUserException"
 
 class Geometry(db.Model):
   name = db.StringProperty()
@@ -61,44 +53,14 @@ def jsonOutput(geometries, operation):
     if alt != []:
       altitudes = '[%s]' % (','.join('%f' % a for a in alt))
     coordinates = '[{%s}]' % ('},{'.join(coords))
-    points.append("{key: '%s', userId: '%s', name: '%s', type: '%s', description: '%s', timeStamp: '%s', coordinates: %s, altitudes: %s, bbox: %s}" % (geometry.key(), geometry.userId, geometry.name,geometry.type, geometry.description,geometry.timeStamp, coordinates, altitudes,bbox))
+    points.append("{key: '%s', userId: '%s', name: '%s', type: '%s', description: '%s', timeStamp: '%s', coordinates: %s, altitudes: %s, bbox: %s}" % (geometry.key(), geometry.userId, quote(geometry.name,' '),geometry.type, quote(geometry.description,' '),geometry.timeStamp, coordinates, altitudes,bbox))
 
   geoJson.append(','.join(points))
   geoJson.append(']}}}')
   geoJsonOutput = ''.join(geoJson)
-  contentType = 'application/javascript'
+  contentType = 'text/javascript'
   return geoJsonOutput, contentType
-def createPlacemark(place,geometry,kmlDoc):
-  name = kmlDoc.createElement('name')
-  textNode = kmlDoc.createTextNode(geometry.name)
-  name.appendChild(textNode)
-  place.appendChild(name)
-  description = kmlDoc.createElement('description')
-  textNode = kmlDoc.createTextNode(geometry.description)
-  description.appendChild(textNode)
-  place.appendChild(description)
-  coordString = createCoordinateString(geometry.coordinates,geometry.altitudes)
-  coords = kmlDoc.createElement('coordinates')
-  coordsText = kmlDoc.createTextNode(coordString)
-  coords.appendChild(coordsText)
-  if geometry.type == 'point':
-    point = kmlDoc.createElement('Point')
-    point.appendChild(coords)
-    place.appendChild(point)
 
-  elif geometry.type == 'poly':
-    polygon = kmlDoc.createElement('Polygon')
-    outerBounds = kmlDoc.createElement('outerBoundaryIs')
-    polygon.appendChild(outerBounds)
-    outerBounds.appendChild(coords)
-    place.appendChild(polygon)
-
-  elif geometry.type == 'line':
-    line = kmlDoc.createElement('LineString')
-    line.appendChild(coords)
-    place.appendChild(line)
-  return place
-  
 def kmlOutput(geometries,bboxWest=None,bboxSouth=None,bboxEast=None,bboxNorth=None):
   # This creates the core document.
   kmlDoc = xml.dom.minidom.Document()
@@ -120,15 +82,38 @@ def kmlOutput(geometries,bboxWest=None,bboxSouth=None,bboxEast=None,bboxNorth=No
         createPlace = True
       else:
         createPlace = False
-      if createPlace == True:
-        p = kmlDoc.createElement('Placemark')
-        place = createPlacemark(p,geometry,kmlDoc)
-        p = None
-        document.appendChild(place)
-    else:
-      p = kmlDoc.createElement('Placemark')
-      place = createPlacemark(p,geometry,kmlDoc)
-      p = None
+    if createPlace == True:
+      place = kmlDoc.createElement('Placemark')
+      name = kmlDoc.createElement('name')
+      textNode = kmlDoc.createTextNode(geometry.name)
+      name.appendChild(textNode)
+      place.appendChild(name)
+      description = kmlDoc.createElement('description')
+      textNode = kmlDoc.createTextNode(geometry.description)
+      description.appendChild(textNode)
+      place.appendChild(description)
+      coordString = createCoordinateString(geometry.coordinates,geometry.altitudes)
+      coords = kmlDoc.createElement('coordinates')
+      coordsText = kmlDoc.createTextNode(coordString)
+      coords.appendChild(coordsText)
+    
+      if geometry.type == 'point':
+        point = kmlDoc.createElement('Point')
+        point.appendChild(coords)
+        place.appendChild(point)
+
+      elif geometry.type == 'poly':
+        polygon = kmlDoc.createElement('Polygon')
+        outerBounds = kmlDoc.createElement('outerBoundaryIs')
+        polygon.appendChild(outerBounds)
+        outerBounds.appendChild(coords)
+        place.appendChild(polygon)
+
+      elif geometry.type == 'line':
+        line = kmlDoc.createElement('LineString')
+        line.appendChild(coords)
+        place.appendChild(line)
+     
       document.appendChild(place)
   kml.appendChild(document)
   contentType = 'application/vnd.google-earth.kml+xml' 
@@ -177,7 +162,7 @@ class Request(webapp.RequestHandler):
         out,contentType = self.deleteGeometries()
       else:
         out,contentType = self.getGeometries()
-      self.response.headers['content-type']= contentType
+      self.response.headers.add_header('Content-Type', contentType)
       self.response.out.write(out)
 
   def getGeometries(self):
@@ -212,9 +197,7 @@ class Request(webapp.RequestHandler):
       qryString = 'WHERE %s LIMIT %s' % (' and '.join(query), limit)
     geometries = Geometry.gql(qryString)
     outputAction = {'json': jsonOutput(geometries,'get'),'kml': kmlOutput(geometries,bboxWest,bboxSouth,bboxEast,bboxNorth)}
-    outputType = {'json': 'application/json','kml': 'application/vnd.google-earth.kml+xml'}
     out,contentType = outputAction.get(output)
-    contentType = outputType.get(output)
     return out,contentType
 
   def addGeometries(self):
@@ -228,39 +211,33 @@ class Request(webapp.RequestHandler):
       userid=None
       if user:
         userid=user.email()
-        west, south, east, north = computeBBox(lat,lng)
-        coords = []
-        for i in range(0, len(lat)):
-          gp = db.GeoPt(lat[i], lng[i])
-          coords.append(gp)
-        altitudes = []
-        for alt in alts:
-          altitudes.append(float(alt))
-        description = self.request.get('description')
-        type = self.request.get('type',default_value='point')
-        gp = Geometry(name=name,description=description,type=type,
-                       coordinates=coords,altitudes=altitudes,
-                       tags=tags, bboxEast=east, bboxWest=west,
-                       bboxSouth=south, bboxNorth=north,userId=userid)
+      west, south, east, north = computeBBox(lat,lng)
+      coords = []
+      for i in range(0, len(lat)):
+        gp = db.GeoPt(lat[i], lng[i])
+        coords.append(gp)
+      altitudes = []
+      for alt in alts:
+        altitudes.append(float(alt))
+      description = self.request.get('description')
+      type = self.request.get('type',default_value='point')
+      gp = Geometry(name=name,description=description,type=type,
+                     coordinates=coords,altitudes=altitudes,
+                     tags=tags, bboxEast=east, bboxWest=west,
+                     bboxSouth=south, bboxNorth=north,userId=userid)
 
-        gp.put()
-        gps = []
-        gps.append(gp)
-        jsonResponse,contentType = jsonOutput(gps,'add')
-      else:
-        raise InvalidUserException
+      gp.put()
+      gps = []
+      gps.append(gp)
+      jsonResponse,contentType = jsonOutput(gps,'add')
 
     except TypeError, ValueError:
       jsonResponse="{error:{type:'add',lat:'%s',lng:'%s'}}" % (lat[0], lng[0])
-      contentType = 'application/javascript'
+      contentType = 'text/javascript'
     return jsonResponse,contentType
 
   def editGeometries(self):
     try:
-      user = users.GetCurrentUser()
-      userid=None
-      if user:
-        userid=user.email()
       lat = self.request.get('lat',allow_multiple=True,default_value=0.0)
       lng = self.request.get('lng',allow_multiple=True,default_value=0.0)
       name = self.request.get('name',default_value = '')
@@ -277,55 +254,38 @@ class Request(webapp.RequestHandler):
       type = self.request.get('type',default_value='point')
 
       gp = Geometry.get(key)
-      if gp.userid == userid | user.is_current_user_admin():
-        gp.name = name
-        gp.description=description
-        gp.type=type
-        gp.coordinates=coords
-        gp.altitudes=alts
-        gp.tags=tags
-        gp.bboxEast=east
-        gp.bboxWest=west
-        gp.bboxSouth=south
-        gp.bboxNorth=north
-        gp.put()
-        gps = [gp]
-        gps.append(gp) 
-      else:
-        raise IncorrectUserException
-
+      gp.name = name
+      gp.description=description
+      gp.type=type
+      gp.coordinates=coords
+      gp.altitudes=alts
+      gp.tags=tags
+      gp.bboxEast=east
+      gp.bboxWest=west
+      gp.bboxSouth=south
+      gp.bboxNorth=north
+      gp.put()
+      gps = [gp]
+      gps.append(gp)
       jsonResponse,contentType = jsonOutput(gps, 'edit')
-      
-    except TypeError:
+
+    except TypeError, ValueError:
       jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
-      contentType = 'application/javascript'
-    except ValueError:
-      jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
-      contentType = 'application/javascript'
-    except IncorrectUserException:
-      jsonResponse="{error:{type:'edit',key:'%s'}}" % self.request.get('key')
-      contentType = 'application/javascript'
+      contentType = 'text/javascript'
     return jsonResponse,contentType
 
 
   def deleteGeometries(self):
-    user = users.GetCurrentUser()
-    userid=None
-    if user:
-      userid=user.email()
     success = "success"
 
     try:
-      if gp.userid == userid | user.is_current_user_admin():
-        key = str(self.request.get('key'))
-        gp = Geometry.get(key)
-        gp.delete()
-        jsonResponse = "{operation:'delete',status:'success',key:'%s'}" % key
-      else:
-        raise IncorrectUserException
+      key = str(self.request.get('key'))
+      gp = Geometry.get(key)
+      gp.delete()
+      jsonResponse = "{operation:'delete',status:'success',key:'%s'}" % key
     except:
       jsonResponse = "{error:{type:'delete',records:{key:'%s'}}}" % self.request.get('key')
-    contentType = 'application/javascript'
+    contentType = 'text/javascript'
     return jsonResponse,contentType
 
 application = webapp.WSGIApplication(
