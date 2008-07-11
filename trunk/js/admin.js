@@ -465,6 +465,9 @@ geoserver.adminPanel.prototype.handleDataResponse_ = function(me, data, response
 
 geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
   var me = this;
+  data.name = unescape(data.name);
+  data.description = unescape(data.description);
+
   if (data.type == 'point') {
     var geometry = new GMarker(new GLatLng(data.coordinates[0].lat, data.coordinates[0].lng), {draggable: true, icon: me.icons_.unchanged});
   } else if (data.type == 'line' || data.type == 'poly') {
