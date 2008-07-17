@@ -521,7 +521,7 @@ geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
       });
       if (is_editable) {
         me.selected_geometry_ = geometry;
-        geometry.addVerticesInteractively(); 
+        geometry.enableDrawing();
       }
     }
   }
