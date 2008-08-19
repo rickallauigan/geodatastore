@@ -83,6 +83,6 @@ application = webapp.WSGIApplication(
                                      [
                                       ('/locate', Request),
                                        ],
-                                     debug=True)
+                                     debug=False)
 
 wsgiref.handlers.CGIHandler().run(application)

@@ -20,7 +20,7 @@ class BasePage(webapp.RequestHandler):
   def get(self):
     self.render(self.getTemplateFilename(), self.getTemplateValues())
 
-  def getTemplateValues(self):
+  def getTemplateValues(self, title):
     if users.GetCurrentUser():
       login_url = users.CreateLogoutURL(self.request.uri)
       login_linktext = 'Logout'
@@ -36,7 +36,8 @@ class BasePage(webapp.RequestHandler):
         'linktext': login_linktext,
         'name': login_name,
         'admin': users.is_current_user_admin()
-      }
+      },
+      'title': title
     }
     return template_values
 
@@ -53,7 +54,7 @@ class AdminPage(BasePage):
   ##
   # Returns a dictionary with values for the template
   def getTemplateValues(self):
-    template_values = BasePage.getTemplateValues(self)
+    template_values = BasePage.getTemplateValues(self, 'Admin')
     return template_values
 
   ##
@@ -68,7 +69,7 @@ class QueryPage(BasePage):
   ##
   # Returns a dictionary with values for the template
   def getTemplateValues(self):
-    template_values = BasePage.getTemplateValues(self)
+    template_values = BasePage.getTemplateValues(self, 'Query')
     return template_values
 
   ##
@@ -83,7 +84,7 @@ class MapDisplayPage(BasePage):
   ##
   # Returns a dictionary with values for the template
   def getTemplateValues(self):
-    template_values = BasePage.getTemplateValues(self)
+    template_values = BasePage.getTemplateValues(self, 'Map')
     return template_values
 
   ##
@@ -98,7 +99,7 @@ class LocatorPage(BasePage):
   ##
   # Returns a dictionary with values for the template
   def getTemplateValues(self):
-    template_values = BasePage.getTemplateValues(self)
+    template_values = BasePage.getTemplateValues(self, 'Locator')
     return template_values
 
   ##
@@ -112,5 +113,6 @@ application = webapp.WSGIApplication(
      ('/admin', AdminPage),
      ('/mapdisplay', MapDisplayPage),
      ('/locator', LocatorPage),
-     ('/query', QueryPage)],debug=True)
+     ('/query', QueryPage)],
+    debug=False)
 wsgiref.handlers.CGIHandler().run(application)
