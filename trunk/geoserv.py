@@ -292,6 +292,6 @@ application = webapp.WSGIApplication(
                                      [
                                       ('/gen/request', Request)
                                        ],
-                                     debug=True)
+                                     debug=False)
 
 wsgiref.handlers.CGIHandler().run(application)

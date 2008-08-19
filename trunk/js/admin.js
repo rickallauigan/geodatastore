@@ -211,10 +211,6 @@ geoserver.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
     } 
     me.selected_geometry_ = geometry;
     div.style.backgroundColor = '#FFD7AE';
-    console.log(div.offsetTop);
-    console.log(div.scrollTop);
-    console.log(div.style.height);
-    console.log(me.dom_.sidebar_div.offsetHeight);
     me.dom_.sidebar_div.scrollTop = div.offsetTop - me.dom_.sidebar_div.offsetHeight/2;
     me.updateHighlightPoly_();
   });
@@ -485,7 +481,14 @@ geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
   }
 
   var sidebar_entry = me.createSidebarEntry_(geometry);
-  me.dom_.sidebar_div.appendChild(sidebar_entry);
+  if (me.dom_.sidebar_divs.length > 1) {
+    //me.dom_.sidebar_div.insertBefore(sidebar_entry);
+    var last_sidebar_entry = me.dom_.sidebar_divs[me.dom_.sidebar_divs.length-2];
+    console.log(last_sidebar_entry);
+    me.dom_.sidebar_div.insertBefore(sidebar_entry, last_sidebar_entry);
+  } else {
+    me.dom_.sidebar_div.appendChild(sidebar_entry);
+  }
   geometry.sidebar_entry = sidebar_entry;
   if (is_editable) {
     GEvent.trigger(geometry.sidebar_entry, 'enableedit');
