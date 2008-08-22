@@ -1,11 +1,11 @@
 //Depends on readonly.js
 
-geoserver.mapDisplay.prototype.locator_override_createMap_ = 
-  geoserver.mapDisplay.prototype.createMap_;
+geodatastore.mapDisplay.prototype.locator_override_createMap_ = 
+  geodatastore.mapDisplay.prototype.createMap_;
 
-geoserver.mapDisplay.prototype.loadKmlData_ = function() {};
+geodatastore.mapDisplay.prototype.loadKmlData_ = function() {};
 
-geoserver.mapDisplay.prototype.createMap_ = function(id) {
+geodatastore.mapDisplay.prototype.createMap_ = function(id) {
   var me = this;
   if (!this.geocoder_) {
     this.geocoder_ = new GClientGeocoder();
@@ -43,7 +43,7 @@ geoserver.mapDisplay.prototype.createMap_ = function(id) {
         var src = '/locate?lat=' + location.lat();
         src += '&lon=' + location.lng();
         src += '&num=3&alt=json-in-script';
-        src += '&callback=geoserver.mapDisplay.handleLocatorJson';
+        src += '&callback=geodatastore.mapDisplay.handleLocatorJson';
       
         var script = document.createElement('script');
         script.setAttribute('src', src);
@@ -56,11 +56,11 @@ geoserver.mapDisplay.prototype.createMap_ = function(id) {
   });
   
   this.dom_.sidebar_div.appendChild(input_div);
-  window.geoserver_object_ = this;
+  window.geodatastore_object_ = this;
 };
 
-geoserver.mapDisplay.handleLocatorJson = function(json) {
-  window.geoserver_object_.map_.clearOverlays();
+geodatastore.mapDisplay.handleLocatorJson = function(json) {
+  window.geodatastore_object_.map_.clearOverlays();
   var records = json.result.geometries.records;
   var bounds = new GLatLngBounds();
   for (var i=0; i<records.length; i++) {
@@ -72,10 +72,10 @@ geoserver.mapDisplay.handleLocatorJson = function(json) {
     
     var marker = new GMarker(loc);
     marker.bindInfoWindowHtml(records[i].description);
-    window.geoserver_object_.map_.addOverlay(marker);
+    window.geodatastore_object_.map_.addOverlay(marker);
   }
   if (!bounds.isEmpty()) {
-    window.geoserver_object_.map_.setCenter(bounds.getCenter());
-    window.geoserver_object_.map_.setZoom(window.geoserver_object_.map_.getBoundsZoomLevel(bounds));
+    window.geodatastore_object_.map_.setCenter(bounds.getCenter());
+    window.geodatastore_object_.map_.setZoom(window.geodatastore_object_.map_.getBoundsZoomLevel(bounds));
   }
 };

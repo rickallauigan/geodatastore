@@ -1,10 +1,4 @@
-if(typeof console == "undefined"){
- var console = {log:function(){}}
-}
-
-var geoserver = {};
-
-geoserver.adminPanel = function(id) {
+geodatastore.adminPanel = function(id) {
   this.map_ = null;
   this.dom_ = {
     wrapper_div: document.getElementById(id),
@@ -16,56 +10,22 @@ geoserver.adminPanel = function(id) {
   this.createMap_();
 };
 
-geoserver.adminPanel.prototype.canUserEdit_ = function(userId) {
+geodatastore.adminPanel.prototype.canUserEdit_ = function(userId) {
   return (userId == current_user || is_admin == 'True'); 
 }
 
-geoserver.adminPanel.prototype.isUserLoggedIn_ = function() {
+geodatastore.adminPanel.prototype.isUserLoggedIn_ = function() {
   return current_user != 'Not logged in';
 }
 
-geoserver.adminPanel.prototype.createMap_ = function() {
+geodatastore.adminPanel.prototype.createMap_ = function() {
   var me = this;
-  var table = document.createElement('table');
-  table.style.width = '100%';
-  if (window.innerHeight) {
-    var height = window.innerHeight - 150; 
-  } else {
-    var height = document.documentElement.offsetHeight - 150; 
-  }
-  height = height + "px";
 
-  var tbody = document.createElement('tbody');
-  table.appendChild(tbody);
+  var created_divs = geodatastore.createMapWithSidebar(this.dom_.wrapper_div);
+  this.dom_.map_div = created_divs.map_div;
+  this.dom_.sidebar_div = created_divs.sidebar_div;
 
-  var tr = document.createElement('tr');
-
-  var map_td = document.createElement('td');
-  map_td.height = height;
-  var map_div = document.createElement('div');
-  map_div.style.width = '100%';
-  map_div.style.height = '100%';
-  map_div.style.border = '1px solid #eeeeee';
-  map_td.appendChild(map_div);
-
-  var sidebar_td = document.createElement('td');
-  sidebar_td.width = '29%';
-  sidebar_td.height = height;
-  var sidebar_div = document.createElement('div');
-  sidebar_div.id = 'sidebar';
-  sidebar_div.style.overflow = 'scroll';
-  sidebar_div.style.border = '1px solid #eeeeee';
-  sidebar_div.style.height = height;
-  sidebar_td.appendChild(sidebar_div);
-
-  tr.appendChild(map_td);
-  tr.appendChild(sidebar_td);
-  tbody.appendChild(tr);
-
-  this.dom_.wrapper_div.appendChild(table);
-  this.dom_.sidebar_div = sidebar_div;
- 
-  this.map_ = new GMap2(map_div, {googleBarOptions:
+  this.map_ = new GMap2(this.dom_.map_div, {googleBarOptions:
   {showOnLoad: true, onGenerateMarkerHtmlCallback : function(marker, html, result) {
     return me.extendMarker_(me, marker, html, result);}}});
   this.map_.setCenter(new GLatLng(37, -122));
@@ -136,7 +96,7 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   this.loadKmlData_();
 };
 
-geoserver.adminPanel.prototype.extendMarker_ = function(gs, marker, html, result) {
+geodatastore.adminPanel.prototype.extendMarker_ = function(gs, marker, html, result) {
   var me = this;
   // extend the passed in html for this result
   // http://code.google.com/apis/ajaxsearch/documentation/reference.html#_class_GlocalResult
@@ -165,7 +125,7 @@ geoserver.adminPanel.prototype.extendMarker_ = function(gs, marker, html, result
 };
 
 
-geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
+geodatastore.adminPanel.prototype.updateHighlightPoly_ = function() {
   var me = this;
   if (me.highlightPoly_) { me.map_.removeOverlay(me.highlightPoly_); }
   if (!me.selected_geometry_) { return; }
@@ -198,7 +158,7 @@ geoserver.adminPanel.prototype.updateHighlightPoly_ = function() {
 
 }
     
-geoserver.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
+geodatastore.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
   var me = this;
   var div = document.createElement('div');
   div.style.cursor = 'pointer';
@@ -289,7 +249,7 @@ geoserver.adminPanel.prototype.createSidebarEntry_ = function(geometry) {
   return div;
 }
 
-geoserver.adminPanel.prototype.createTableRow_ = function(label, value, is_input, geometry) {
+geodatastore.adminPanel.prototype.createTableRow_ = function(label, value, is_input, geometry) {
   var tr = document.createElement('tr');
   var label_td = document.createElement('td');
   label_td.className = 'view_label';
@@ -313,7 +273,7 @@ geoserver.adminPanel.prototype.createTableRow_ = function(label, value, is_input
   return tr;
 }
 
-geoserver.adminPanel.prototype.createView_ = function(geometry, parent_div) {
+geodatastore.adminPanel.prototype.createView_ = function(geometry, parent_div) {
   var me = this;
  
   var div = document.createElement('div');
@@ -340,7 +300,7 @@ geoserver.adminPanel.prototype.createView_ = function(geometry, parent_div) {
   return div;
 }
 
-geoserver.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
+geodatastore.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
   var me = this;
 
   var div = document.createElement('div');
@@ -408,7 +368,7 @@ geoserver.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
   return div;
 };
 
-geoserver.adminPanel.prototype.loadKmlData_ = function() {
+geodatastore.adminPanel.prototype.loadKmlData_ = function() {
   var me = this;
   var url_base = 'gen/';
   var url = url_base + 'request?operation=get&output=json'
@@ -416,7 +376,7 @@ geoserver.adminPanel.prototype.loadKmlData_ = function() {
   GDownloadUrl(url, function(data, responseCode) { me.handleDataResponse_(me, data, responseCode); });
 };
 
-geoserver.adminPanel.prototype.saveData_ = function(type, data) {
+geodatastore.adminPanel.prototype.saveData_ = function(type, data) {
   var url  = 'gen/request?';
   var url_params = ['operation=' + type];
   for (var data_key in data) {
@@ -437,7 +397,7 @@ geoserver.adminPanel.prototype.saveData_ = function(type, data) {
   GDownloadUrl(url, this.handleDataResponse_);
 };
 
-geoserver.adminPanel.prototype.handleDataResponse_ = function(me, data, responseCode) {
+geodatastore.adminPanel.prototype.handleDataResponse_ = function(me, data, responseCode) {
   if (responseCode == 200) {
     var json_data = eval('(' + data + ')');
     if (json_data.status != 'success') return;
@@ -463,7 +423,7 @@ geoserver.adminPanel.prototype.handleDataResponse_ = function(me, data, response
 };
 
 
-geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
+geodatastore.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
   var me = this;
   data.name = unescape(data.name);
   data.description = unescape(data.description);
