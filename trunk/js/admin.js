@@ -1,5 +1,6 @@
-var console = console || {};
-console.log = console.log || function(data) { }
+if(typeof console == "undefined"){
+ var console = {log:function(){}}
+}
 
 var geoserver = {};
 
@@ -28,11 +29,14 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   var table = document.createElement('table');
   table.style.width = '100%';
   if (window.innerHeight) {
-    var height = window.innerHeight - 40; 
+    var height = window.innerHeight - 150; 
   } else {
-    var height = document.documentElement.offsetHeight - 40; 
+    var height = document.documentElement.offsetHeight - 150; 
   }
   height = height + "px";
+
+  var tbody = document.createElement('tbody');
+  table.appendChild(tbody);
 
   var tr = document.createElement('tr');
 
@@ -41,7 +45,7 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   var map_div = document.createElement('div');
   map_div.style.width = '100%';
   map_div.style.height = '100%';
-  map_div.style.border = '1px solid grey';
+  map_div.style.border = '1px solid #eeeeee';
   map_td.appendChild(map_div);
 
   var sidebar_td = document.createElement('td');
@@ -50,13 +54,13 @@ geoserver.adminPanel.prototype.createMap_ = function() {
   var sidebar_div = document.createElement('div');
   sidebar_div.id = 'sidebar';
   sidebar_div.style.overflow = 'scroll';
-  sidebar_div.style.border = '1px solid grey';
+  sidebar_div.style.border = '1px solid #eeeeee';
   sidebar_div.style.height = height;
   sidebar_td.appendChild(sidebar_div);
 
   tr.appendChild(map_td);
   tr.appendChild(sidebar_td);
-  table.appendChild(tr);
+  tbody.appendChild(tr);
 
   this.dom_.wrapper_div.appendChild(table);
   this.dom_.sidebar_div = sidebar_div;
@@ -484,7 +488,6 @@ geoserver.adminPanel.prototype.createGeometry_ = function(data, is_editable) {
   if (me.dom_.sidebar_divs.length > 1) {
     //me.dom_.sidebar_div.insertBefore(sidebar_entry);
     var last_sidebar_entry = me.dom_.sidebar_divs[me.dom_.sidebar_divs.length-2];
-    console.log(last_sidebar_entry);
     me.dom_.sidebar_div.insertBefore(sidebar_entry, last_sidebar_entry);
   } else {
     me.dom_.sidebar_div.appendChild(sidebar_entry);
