@@ -1,11 +1,4 @@
-var console = console || {};
-console.log = console.log || function(data) { }
-
-if (!geoserver) {
-  var geoserver = {};
-}
-
-geoserver.mapDisplay = function(id) {
+geodatastore.mapDisplay = function(id) {
   this.map_ = null;
   this.dom_ = {
     wrapper_div: document.getElementById(id),
@@ -16,31 +9,14 @@ geoserver.mapDisplay = function(id) {
   this.createMap_();
 };
 
-geoserver.mapDisplay.prototype.createMap_ = function() {
+geodatastore.mapDisplay.prototype.createMap_ = function() {
   var me = this;
-  var table = document.createElement('table');
-  table.style.width = '100%';
-  var tr = document.createElement('tr');
-  var map_td = document.createElement('td');
-  map_td.width = '70%';
-  var map_div = document.createElement('div');
-  map_div.style.height = '700px';
-  map_div.style.border = '1px solid grey';
-  map_td.appendChild(map_div);
-  var sidebar_td = document.createElement('td');
-  sidebar_td.width = '29%';
-  var sidebar_div = document.createElement('div');
-  sidebar_div.style.height = '700px';
-  sidebar_div.style.overflow = 'auto';
-  sidebar_div.style.border = '1px solid grey';
-  sidebar_td.appendChild(sidebar_div);
-  tr.appendChild(map_td);
-  tr.appendChild(sidebar_td);
-  table.appendChild(tr);
-  this.dom_.wrapper_div.appendChild(table);
-  this.dom_.sidebar_div = sidebar_div;
+
+  var created_divs = geodatastore.createMapWithSidebar(this.dom_.wrapper_div);
+  this.dom_.map_div = created_divs.map_div;
+  this.dom_.sidebar_div = created_divs.sidebar_div;
  
-  this.map_ = new GMap2(map_div); 
+  this.map_ = new GMap2(this.dom_.map_div); 
   this.map_.setCenter(new GLatLng(37, -122));
   this.map_.addControl(new GLargeMapControl());
   this.map_.addControl(new GMapTypeControl());
@@ -61,7 +37,7 @@ geoserver.mapDisplay.prototype.createMap_ = function() {
   this.loadKmlData_();
 };
 
-geoserver.mapDisplay.prototype.updateHighlightPoly_ = function() {
+geodatastore.mapDisplay.prototype.updateHighlightPoly_ = function() {
   var me = this;
   if (me.highlightPoly_) { me.map_.removeOverlay(me.highlightPoly_); }
   if (!me.selected_geometry_) { return; }
@@ -92,7 +68,7 @@ geoserver.mapDisplay.prototype.updateHighlightPoly_ = function() {
   me.map_.addOverlay(me.highlightPoly_);
 };
     
-geoserver.mapDisplay.prototype.createSidebarEntry_ = function(geometry) {
+geodatastore.mapDisplay.prototype.createSidebarEntry_ = function(geometry) {
   var me = this;
   var div = document.createElement('div');
   div.style.cursor = 'pointer';
@@ -105,7 +81,7 @@ geoserver.mapDisplay.prototype.createSidebarEntry_ = function(geometry) {
   return div;
 };
 
-geoserver.mapDisplay.prototype.createTableRow_ = function(label, value, is_input, geometry) {
+geodatastore.mapDisplay.prototype.createTableRow_ = function(label, value, is_input, geometry) {
   var tr = document.createElement('tr');
   var label_td = document.createElement('td');
   label_td.className = 'view_label';
@@ -125,7 +101,7 @@ geoserver.mapDisplay.prototype.createTableRow_ = function(label, value, is_input
   return tr;
 };
 
-geoserver.mapDisplay.prototype.createView_ = function(geometry, parent_div) {
+geodatastore.mapDisplay.prototype.createView_ = function(geometry, parent_div) {
   var me = this;
  
   var div = document.createElement('div');
@@ -138,7 +114,7 @@ geoserver.mapDisplay.prototype.createView_ = function(geometry, parent_div) {
   return div;
 };
 
-geoserver.mapDisplay.prototype.loadKmlData_ = function() {
+geodatastore.mapDisplay.prototype.loadKmlData_ = function() {
   var me = this;
   var url_base = 'gen/';
   var url = url_base + 'request?operation=get&output=json';
@@ -146,7 +122,7 @@ geoserver.mapDisplay.prototype.loadKmlData_ = function() {
 };
 
 
-geoserver.mapDisplay.prototype.handleDataResponse_ = function(me, data, responseCode) {
+geodatastore.mapDisplay.prototype.handleDataResponse_ = function(me, data, responseCode) {
   if (responseCode == 200) {
     var json_data = eval('(' + data + ')');
     if (json_data.status != 'success') return;
@@ -172,11 +148,11 @@ geoserver.mapDisplay.prototype.handleDataResponse_ = function(me, data, response
 };
 
 
-geoserver.mapDisplay.prototype.createGeometry_ = function(data, is_editable) {
+geodatastore.mapDisplay.prototype.createGeometry_ = function(data, is_editable) {
   var me = this;
   if (data.type == 'point') {
     var geometry = new GMarker(new GLatLng(data.coordinates[0].lat,
-    data.coordinates[0].lng), {draggable: true, icon: me.icon_});
+    data.coordinates[0].lng), {icon: me.icon_});
   } else if (data.type == 'line' || data.type == 'poly') {
     var latlngs = [];
     for (var i = 0; i < data.coordinates.length; i++) {
@@ -195,7 +171,6 @@ geoserver.mapDisplay.prototype.createGeometry_ = function(data, is_editable) {
   GEvent.addListener(geometry, 'click', function() {
     me.selected_geometry_ = geometry;
     me.updateHighlightPoly_();
-   // GEvent.trigger(geometry.sidebar_entry, 'enableedit');
   });
 
   return geometry;
