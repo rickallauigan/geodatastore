@@ -163,7 +163,7 @@ class Request(webapp.RequestHandler):
         out,contentType = self.deleteGeometries()
       else:
         out,contentType = self.getGeometries()
-      self.response.headers.add_header('Content-Type', contentType)
+      self.response.headers['Content-Type'] = contentType
       self.response.out.write(out)
 
   def getGeometries(self):
