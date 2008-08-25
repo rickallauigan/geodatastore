@@ -1,5 +1,6 @@
 import wsgiref.handlers
 from math import sin, cos, radians, sqrt, atan2
+import geohash
 
 from google.appengine.ext import webapp
 
@@ -36,7 +37,7 @@ class Request(webapp.RequestHandler):
   def get(self):
     self.locate()
     
-  def __getParameters(self):
+  def _getParameters(self):
     lat = float(self.request.get('lat'))
     lon = float(self.request.get('lon'))
     if self.request.get('num'):
@@ -46,19 +47,31 @@ class Request(webapp.RequestHandler):
     alt = self.request.get('alt')
     callback = self.request.get('callback')
     return lat, lon, num, alt, callback
+
+  def _getLocationsNear(self, lat, lon, count, less_than=True):
+    hash = str(geohash.Geohash((lat, lon)))
+    query = Geometry.all()
+    query.filter('type = ', 'point')
+    if less_than:
+      query.filter('geohash < ', hash)
+      query.order('-geohash')
+    else:
+      query.filter('geohash >= ', hash)
+      query.order('geohash')
+    
+    locations = []
+    for geometry in query.fetch(count):
+      location = Location(geometry)
+      location.set_distance(lat, lon)
+      locations.append(location)
+    return locations
     
   def locate(self):
     try:
-      lat, lon, num, alt, callback = self.__getParameters()
-      geometry_query = Geometry.all()
-      geometry_query.filter('type = ', 'point')
+      lat, lon, num, alt, callback = self._getParameters()
       
-      locations = []
-      for geometry in geometry_query:
-        location = Location(geometry)
-        location.set_distance(lat, lon)
-        locations.append(location)
-      locations.sort()
+      locations = self._getLocationsNear(lat, lon, num*10, True)
+      locations += self._getLocationsNear(lat, lon, num*10, False)
       
       geometries = []
       for location in locations[:num]:

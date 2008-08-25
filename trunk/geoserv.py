@@ -1,6 +1,7 @@
 import wsgiref.handlers
 import xml.dom.minidom
 from urllib import quote
+import geohash
 import traceback
 import sys
 
@@ -22,7 +23,7 @@ class Geometry(db.Model):
   bboxWest = db.FloatProperty()
   bboxSouth = db.FloatProperty()
   bboxNorth = db.FloatProperty()
-
+  geohash = db.StringProperty()
 
 
 def getCoordinates(gp):
@@ -221,10 +222,14 @@ class Request(webapp.RequestHandler):
         altitudes.append(float(alt))
       description = self.request.get('description')
       type = self.request.get('type',default_value='point')
-      gp = Geometry(name=name,description=description,type=type,
-                     coordinates=coords,altitudes=altitudes,
-                     tags=tags, bboxEast=east, bboxWest=west,
-                     bboxSouth=south, bboxNorth=north,userId=userid)
+      hash = None
+      if type == 'point':
+        hash = str(geohash.Geohash((float(lat[0]), float(lng[0]))))
+      gp = Geometry(name=name, description=description, type=type,
+                    coordinates=coords, altitudes=altitudes,
+                    tags=tags, bboxEast=east, bboxWest=west,
+                    bboxSouth=south, bboxNorth=north, userId=userid,
+                    geohash=hash)
 
       gp.put()
       gps = []
