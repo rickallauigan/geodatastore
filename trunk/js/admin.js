@@ -317,6 +317,8 @@ geodatastore.adminPanel.prototype.createForm_ = function(geometry, parent_div) {
   save_button.onclick = function() {
     me.selected_geometry_.isEditable = false;
     me.selected_geometry_.isEdited = false;
+    me.selected_geometry_.hasEnded = true;
+    GEvent.trigger(document.getElementById('view_control'),'click');
     parent_div.style.backgroundColor = '#fff';
     me.selected_geometry_.data.name = document.getElementById('name_input').value;
     me.selected_geometry_.data.description = document.getElementById('description_input').value; 
@@ -557,6 +559,7 @@ EditControl.prototype.createButton_ = function(button_opts) {
   button_img.height = '33';
   button_img.border = '0';
   button_img.src = button_opts.img_url;
+  button_img.id = button_opts.name+'_control';
   GEvent.addDomListener(button_img, "click", function() { 
     for (var i = 0; i < me.buttons_.length; i++) {
       me.buttons_[i].img.src = me.buttons_[i].opts.img_url;
