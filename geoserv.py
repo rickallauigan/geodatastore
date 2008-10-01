@@ -4,10 +4,13 @@ from urllib import quote
 import geohash
 import traceback
 import sys
+import time
+import os
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.api import users
+from google.appengine.ext.webapp import template
 
 class Geometry(db.Model):
   name = db.StringProperty()
@@ -25,6 +28,14 @@ class Geometry(db.Model):
   bboxNorth = db.FloatProperty()
   geohash = db.StringProperty()
 
+  def georssPoint(self):
+    lat = float(self.coordinates[0].lat)
+    lon = float(self.coordinates[0].lon)
+    return ('%s %s' % (lat, lon))
+
+  def georssBox(self):
+    return ('%s %s %s %s' % (self.bboxSouth, self.bboxWest, self.bboxNorth,
+                             self.bboxEast))
 
 def getCoordinates(gp):
     lat,lon = 0.0,0.0
@@ -36,6 +47,11 @@ def getCoordinates(gp):
       lon = 0.0
     return lat,lon
 
+def GetCurrentRfc822Time():
+  now = time.gmtime()
+  #YYYY-MM-DDTHH:MM:SSZ
+  return time.strftime('%Y-%m-%dT%H:%M:%SZ', now)
+
 def jsonOutput(geometries, operation): 
   geoJson = []
   geoJson.append("{operation: '%s', status: 'success', result:{geometries:{" % operation)
@@ -45,7 +61,6 @@ def jsonOutput(geometries, operation):
   for geometry in geometries:
     coords = []
     for gp in geometry.coordinates:
-    
       lat, lon = getCoordinates(gp)
       coords.append('lat: %s, lng: %s' % (lat, lon))
     altitudes = '[0.0]'
@@ -61,6 +76,14 @@ def jsonOutput(geometries, operation):
   geoJsonOutput = ''.join(geoJson)
   contentType = 'text/javascript'
   return geoJsonOutput, contentType
+
+def georssOutput(geometries):
+  template_values = {'geometries' : geometries,
+                    'now' : GetCurrentRfc822Time() }
+  path = os.path.join(os.path.dirname(__file__), 'georssfeed.xml')
+  contentType = 'text/xml'
+  georssOutput2 = template.render(path, template_values)
+  return georssOutput2, contentType
 
 def kmlOutput(geometries,bboxWest=None,bboxSouth=None,bboxEast=None,bboxNorth=None):
   # This creates the core document.
@@ -193,11 +216,20 @@ class Request(webapp.RequestHandler):
       bboxSouth = float(bboxList[1])
       bboxEast = float(bboxList[2])
       bboxNorth = float(bboxList[3])
-    qryString = '' 
+    queryString = '' 
     if len(query) > 0:
-      qryString = 'WHERE %s LIMIT %s' % (' and '.join(query), limit)
-    geometries = Geometry.gql(qryString)
-    outputAction = {'json': jsonOutput(geometries,'get'),'kml': kmlOutput(geometries,bboxWest,bboxSouth,bboxEast,bboxNorth)}
+      queryString = 'WHERE %s LIMIT %s' % (' and '.join(query), limit)
+
+    if (output == 'georss'):
+      query = Geometry.all()
+      query.order('-dateModified')
+      geometries = query.fetch(limit=20)
+    else: 
+      geometries = Geometry.gql(queryString)
+
+    outputAction = {'json': jsonOutput(geometries,'get'),
+                    'kml': kmlOutput(geometries,bboxWest,bboxSouth,bboxEast,bboxNorth),
+                    'georss': georssOutput(geometries)}
     out,contentType = outputAction.get(output)
     return out,contentType
 
