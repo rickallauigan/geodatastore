@@ -69,7 +69,7 @@ def jsonOutput(geometries, operation):
     if alt != []:
       altitudes = '[%s]' % (','.join('%f' % a for a in alt))
     coordinates = '[{%s}]' % ('},{'.join(coords))
-    points.append("{key: '%s', userId: '%s', name: '%s', type: '%s', description: '%s', timeStamp: '%s', coordinates: %s, altitudes: %s, bbox: %s}" % (geometry.key(), geometry.userId, quote(geometry.name,' '),geometry.type, quote(geometry.description,' '),geometry.timeStamp, coordinates, altitudes,bbox))
+    points.append("{key: '%s', userId: '%s', name: '%s', type: '%s', description: '%s', timeStamp: '%s', coordinates: %s, altitudes: %s, bbox: %s}" % (geometry.key(), geometry.userId, quote(geometry.name.encode('utf-8'),' '),geometry.type, quote(geometry.description.encode('utf-8'),' '),geometry.timeStamp, coordinates, altitudes,bbox))
 
   geoJson.append(','.join(points))
   geoJson.append(']}}}')
