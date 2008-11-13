@@ -6,11 +6,18 @@ import traceback
 import sys
 import time
 import os
+import logging
+import pickle
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.api import users
 from google.appengine.ext.webapp import template
+from google.appengine.api import memcache
+
+MEMCACHE_GEORSSTEMPLATE = 'georss_template'
+MEMCACHE_GEOMETRYBYDATE = 'geometry_bydate'
+MEMCACHE_GEOMETRYALL = 'geometry_all'
 
 class Geometry(db.Model):
   name = db.StringProperty()
@@ -78,12 +85,16 @@ def jsonOutput(geometries, operation):
   return geoJsonOutput, contentType
 
 def georssOutput(geometries):
-  template_values = {'geometries' : geometries,
+  georssTemplate = memcache.get(MEMCACHE_GEORSSTEMPLATE)
+  if georssTemplate is None:
+    template_values = {'geometries' : geometries,
                     'now' : GetCurrentRfc822Time() }
-  path = os.path.join(os.path.dirname(__file__), 'georssfeed.xml')
+    path = os.path.join(os.path.dirname(__file__), 'georssfeed.xml')
+    georssTemplate = template.render(path, template_values)
+    memcache.set(MEMCACHE_GEORSSTEMPLATE, georssTemplate)
+
   contentType = 'text/xml'
-  georssOutput2 = template.render(path, template_values)
-  return georssOutput2, contentType
+  return georssTemplate, contentType
 
 def kmlOutput(geometries,bboxWest=None,bboxSouth=None,bboxEast=None,bboxNorth=None):
   # This creates the core document.
@@ -167,7 +178,11 @@ def computeBBox(lats,lngs):
 
   return west, south, east, north
 
-
+def clearMemcache():
+  memcache.delete(MEMCACHE_GEOMETRYBYDATE)
+  memcache.delete(MEMCACHE_GEOMETRYALL)
+  memcache.delete(MEMCACHE_GEORSSTEMPLATE)
+  
 class Request(webapp.RequestHandler):
   def post(self):
     self.operationPicker()
@@ -221,9 +236,24 @@ class Request(webapp.RequestHandler):
       queryString = 'WHERE %s LIMIT %s' % (' and '.join(query), limit)
 
     if (output == 'georss'):
-      query = Geometry.all()
-      query.order('-dateModified')
-      geometries = query.fetch(limit=20)
+      geometriesPickled  = memcache.get(MEMCACHE_GEOMETRYBYDATE)
+      if geometriesPickled is None:
+        query = Geometry.all()
+        query.order('-dateModified')
+        geometries = query.fetch(limit=20)
+        if not memcache.set(MEMCACHE_GEOMETRYBYDATE, pickle.dumps(geometries)):
+          logging.debug('Memcache set failed')
+      else:
+        geometries = pickle.loads(geometriesPickled)
+    elif (len(query) == 0):
+      geometriesPickled  = memcache.get(MEMCACHE_GEOMETRYALL)
+      if geometriesPickled is None:
+        query = Geometry.all()
+        geometries = query.fetch(limit=limit)
+        if not memcache.set(MEMCACHE_GEOMETRYALL, pickle.dumps(geometries)):
+          logging.debug('Memcache set failed')
+      else:
+        geometries = pickle.loads(geometriesPickled)
     else: 
       geometries = Geometry.gql(queryString)
 
@@ -266,6 +296,7 @@ class Request(webapp.RequestHandler):
       gp.put()
       gps = []
       gps.append(gp)
+      clearMemcache();
       jsonResponse,contentType = jsonOutput(gps,'add')
 
     except TypeError, ValueError:
@@ -304,6 +335,7 @@ class Request(webapp.RequestHandler):
       gp.put()
       gps = [gp]
       gps.append(gp)
+      clearMemcache();
       jsonResponse,contentType = jsonOutput(gps, 'edit')
 
     except TypeError, ValueError:
@@ -323,6 +355,7 @@ class Request(webapp.RequestHandler):
     except:
       jsonResponse = "{error:{type:'delete',records:{key:'%s'}}}" % self.request.get('key')
     contentType = 'text/javascript'
+    clearMemcache();
     return jsonResponse,contentType
 
 application = webapp.WSGIApplication(
